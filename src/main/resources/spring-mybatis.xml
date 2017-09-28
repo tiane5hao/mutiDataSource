@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <bean id="masterDataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="${driver}"/>
+        <property name="url" value="${master.url}"></property>
+        <property name="username" value="${master.username}"></property>
+        <property name="password" value="${master.password}"></property>
+    </bean>
+
+    <bean id="slaveDataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="${driver}"/>
+        <property name="url" value="${slave.url}"></property>
+        <property name="username" value="${slave.username}"></property>
+        <property name="password" value="${slave.password}"></property>
+    </bean>
+
+    <bean id="dataSource" class="com.zhengyun.util.MutiDataSource">
+        <constructor-arg name="defaultTargetDataSource" ref="masterDataSource"/>
+        <constructor-arg name="targetDataSources">
+            <map>
+                <entry key="slave" value-ref="slaveDataSource"/>
+                <entry key="master" value-ref="masterDataSource"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+    <!-- Mybatis文件 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+         <property name="mapperLocations"  value="classpath:mapper/*.xml"></property>
+     </bean>
+
+      <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+      <property name="basePackage" value="com.zhengyun.mapper"></property>
+       <property name="sqlSessionFactoryBeanName" value ="sqlSessionFactory"></property>
+         </bean>
+    <aop:aspectj-autoproxy/>
+    <bean id="dataSourceMatch" class="com.zhengyun.util.DataSourceMatch"/>
+    <aop:config>
+
+        <aop:aspect id="time"  ref="dataSourceMatch">
+            <aop:pointcut id="addAllMethod" expression="execution(* com.zhengyun.mapper.*.*(..))" />
+            <aop:before method="before" pointcut-ref="addAllMethod"/>
+        </aop:aspect>
+
+    </aop:config>
+</beans>
